@@ -46,7 +46,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 705.0, 398.25, 29.5, 22.0 ],
 					"style" : "",
-					"text" : "1."
+					"text" : "2."
 				}
 
 			}
@@ -180,9 +180,9 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 71.5, 221.5, 109.0, 22.0 ],
+					"patching_rect" : [ 71.5, 221.5, 110.0, 22.0 ],
 					"style" : "",
-					"text" : "read example.mov"
+					"text" : "read example.mp4"
 				}
 
 			}
