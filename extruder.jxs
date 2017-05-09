@@ -1,0 +1,127 @@
+<jittershader name="vert">
+	<param name="tex0" type="int" default="0" />
+	<param name="tex1" type="int" default="1" />
+	<param name="debug" type="int" default="1" />
+	<param name="extrusion" type="float" default="2.0" />
+	<description>
+	</description>
+	<language name="glsl" version="1.0">
+	<bind param="tex0" program="fp" />
+	<bind param="tex1" program="vp" />
+	<bind param="debug" program="fp" />
+	<bind param="extrusion" program="vp" />
+	<program name="vp" type="vertex">
+	<![CDATA[
+		#define PI 3.14159265358979323846
+		
+		//Depth image
+		uniform sampler2DRect tex1;
+		
+		//Texture coords for both depth and color texture
+		varying vec2 texcoords0;
+		varying vec2 texcoords1;
+		
+		//Debug props
+		varying float drawDepth;
+		
+		//Passing luma to the frag to clip the grid
+		varying float clipping;
+		
+		//Extrusion amount
+		uniform float extrusion;
+			
+		//Thanks to the amazing @obviousjim
+		vec3 rgb2hsl( vec3 color ) {
+				float h = 0.0;
+				float s = 0.0;
+				float l = 0.0;
+				float r = color.r;
+				float g = color.g;
+				float b = color.b;
+				float cMin = min( r, min( g, b ) );
+				float cMax = max( r, max( g, b ) );
+				l =  ( cMax + cMin ) / 2.0;
+				if ( cMax > cMin ) {
+					float cDelta = cMax - cMin;
+					// saturation
+					if ( l < 0.5 ) {
+						s = cDelta / ( cMax + cMin );
+					} else {
+						s = cDelta / ( 2.0 - ( cMax + cMin ) );
+					}
+					// hue
+					if ( r == cMax ) {
+						h = ( g - b ) / cDelta;
+					} else if ( g == cMax ) {
+						h = 2.0 + ( b - r ) / cDelta;
+					} else {
+						h = 4.0 + ( r - g ) / cDelta;
+					}
+					if ( h < 0.0) {
+						h += 6.0;
+					}
+					h = h / 6.0;
+				}
+				return vec3( h, s, l );
+		}
+		
+		void main(void){
+			//Calc the tex coords - Jitter style
+			texcoords0 = vec2(gl_TextureMatrix[0] * gl_MultiTexCoord0);
+			texcoords1 = vec2(gl_TextureMatrix[1] * gl_MultiTexCoord1);
+			
+			//Convert the from RGB space to HSL
+			vec3 hsl = rgb2hsl(texture2DRect( tex1, texcoords1 ).xyz);
+			
+			//Send the frag for debuging
+			drawDepth = hsl.x * extrusion;
+			
+			//Make the matrix -> displace Z by the Hue -> invert Z
+			vec4 displace = ftransform();
+			displace.z =  hsl.x * extrusion;
+			displace.z *= -1.0;
+			
+			//Create a clipping mask from the luma
+			clipping = hsl.b * 2.0;
+			
+			//Make magic
+			gl_Position = gl_ModelViewProjectionMatrix * displace;
+		}
+	]]>
+
+		</program>
+		<program name="fp" type="fragment" >
+<![CDATA[
+		
+		//Color texture
+		uniform sampler2DRect tex0;
+		
+		//Clipping mask based on the luma from the vertex shader
+		varying float clipping;
+		
+		//Texture coords
+		varying vec2 texcoords0;
+		varying vec2 texcoords1;
+		
+		//Depth from vertex for debugging
+		varying float drawDepth;
+		
+		//Just a toggle from Max
+		uniform int debug;
+
+		void main(void)
+		{
+			if(debug == 1){
+				if(clipping < 0.75) discard;	
+				gl_FragColor = texture2DRect(tex0,texcoords0);
+			} else {
+				if(clipping < 0.75) discard;
+				gl_FragColor = vec4(vec3(drawDepth), 1.0);
+			}
+			
+			
+		}
+]]>
+		</program>
+	</language>
+</jittershader>
